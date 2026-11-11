@@ -1,6 +1,6 @@
-# AGENTS.md
+﻿# AGENTS.md
 
-See [GEMINI.md](file:///e:/Download/stock-analysis-dashboard/GEMINI.md) for full project architecture, development workflow, and guidelines.
+See [GEMINI.md](GEMINI.md) for full project architecture, development workflow, and guidelines.
 
 ## Agent Guidelines Summary
 - **Project**: Stock Analysis Dashboard (React 18 + TypeScript + Vite + Express + Google GenAI SDK).

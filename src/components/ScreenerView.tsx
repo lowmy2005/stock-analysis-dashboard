@@ -14,6 +14,54 @@ const formatScreenerCap = (val: number | undefined | null): string => {
   return `$${val.toLocaleString()}`;
 };
 
+const getActionMeta = (stock: any) => {
+  const label = stock.action || (
+    stock.score >= 70 ? 'Strong Buy' :
+    stock.score >= 55 ? 'Buy' :
+    stock.score >= 40 ? 'Hold' : 'Sell'
+  );
+
+  if (label === 'Strong Buy') {
+    return { label: 'Strong Buy', color: 'text-[#22c55e] bg-[#22c55e]/10 border-[#22c55e]/30' };
+  }
+  if (label === 'Buy') {
+    return { label: 'Buy', color: 'text-[#a3e635] bg-[#a3e635]/10 border-[#a3e635]/30' };
+  }
+  if (label === 'Hold') {
+    return { label: 'Hold', color: 'text-amber-500 bg-amber-500/10 border-amber-500/30' };
+  }
+  return { label: 'Sell', color: 'text-red-500 bg-red-500/10 border-red-500/30' };
+};
+
+const getDirectionMeta = (stock: any) => {
+  let label = stock.direction;
+  if (!label) {
+    const dirScore = stock.directionScore !== undefined
+      ? stock.directionScore
+      : Math.round((stock.score || 0) * 0.6);
+
+    if (dirScore >= 45) label = 'Strong Bull';
+    else if (dirScore >= 33) label = 'Bull';
+    else if (dirScore >= 24) label = 'Neutral';
+    else if (dirScore >= 15) label = 'Bear';
+    else label = 'Strong Bear';
+  }
+
+  if (label === 'Strong Bull') {
+    return { label: 'Strong Bull', color: 'text-[#22c55e] bg-[#22c55e]/10 border-[#22c55e]/30' };
+  }
+  if (label === 'Bull') {
+    return { label: 'Bull', color: 'text-[#a3e635] bg-[#a3e635]/10 border-[#a3e635]/30' };
+  }
+  if (label === 'Neutral') {
+    return { label: 'Neutral', color: 'text-amber-500 bg-amber-500/10 border-amber-500/30' };
+  }
+  if (label === 'Bear') {
+    return { label: 'Bear', color: 'text-red-400 bg-red-400/10 border-red-400/30' };
+  }
+  return { label: 'Strong Bear', color: 'text-red-500 bg-red-500/10 border-red-500/30' };
+};
+
 export default function ScreenerView({ onSelectTicker, onClose }: ScreenerViewProps) {
   const [screenerType, setScreenerType] = useState<'most_active' | 'sp500' | 'nasdaq100'>('most_active');
   const [screenerData, setScreenerData] = useState<any[]>([]);
@@ -162,18 +210,22 @@ export default function ScreenerView({ onSelectTicker, onClose }: ScreenerViewPr
                   <th className="p-4 text-right">Market Cap</th>
                   <th className="p-4 text-center">Score</th>
                   <th className="p-4 text-center">Action</th>
+                  <th className="p-4 text-center">Direction</th>
+                  <th className="p-4 text-center">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#1f2128]/40">
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="p-8 text-center text-zinc-500">
+                    <td colSpan={11} className="p-8 text-center text-zinc-500">
                       No matching equities identified in this cohort query.
                     </td>
                   </tr>
                 ) : (
                   filtered.map((stock) => {
                     const isUp = stock.change >= 0;
+                    const actionMeta = getActionMeta(stock);
+                    const directionMeta = getDirectionMeta(stock);
                     return (
                       <tr
                         key={stock.symbol}
@@ -212,6 +264,16 @@ export default function ScreenerView({ onSelectTicker, onClose }: ScreenerViewPr
                         </td>
                         <td className="p-4 text-center font-bold font-mono text-[#22c55e]">
                           {stock.score}
+                        </td>
+                        <td className="p-4 text-center">
+                          <span className={`px-2.5 py-1 rounded text-[10px] font-bold border font-mono uppercase inline-block whitespace-nowrap ${actionMeta.color}`}>
+                            {actionMeta.label}
+                          </span>
+                        </td>
+                        <td className="p-4 text-center">
+                          <span className={`px-2.5 py-1 rounded text-[10px] font-bold border font-mono uppercase inline-block whitespace-nowrap ${directionMeta.color}`}>
+                            {directionMeta.label}
+                          </span>
                         </td>
                         <td className="p-4 text-center">
                           <button

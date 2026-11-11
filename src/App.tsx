@@ -14,6 +14,7 @@ import {
   ArrowDownRight,
   RefreshCw,
   LayoutGrid,
+  FileText,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -35,6 +36,7 @@ import {
 } from 'recharts';
 import { StockQueryResponse, HistoricalData } from './types';
 import ScreenerView from './components/ScreenerView';
+import UsReportsView from './components/UsReportsView';
 // BacktestView import removed
 
 // Custom shape for drawing candlesticks in Recharts with robust self-healing scale recovery
@@ -174,7 +176,7 @@ export default function App() {
   const [showFinancialsModal, setShowFinancialsModal] = useState(false);
 
   // Screener-related states
-  const [activeView, setActiveView] = useState<'dashboard' | 'screener'>('dashboard');
+  const [activeView, setActiveView] = useState<'dashboard' | 'screener' | 'reports'>('dashboard');
   const [screenerType, setScreenerType] = useState<'most_active' | 'sp500' | 'nasdaq100'>('most_active');
   const [screenerData, setScreenerData] = useState<any[]>([]);
   const [screenerLoading, setScreenerLoading] = useState(false);
@@ -362,6 +364,25 @@ export default function App() {
   const totalScore = data ? (data.breakdown.trend + data.breakdown.momentum + data.breakdown.fund + data.breakdown.risk) : 0;
   const scoreMeta = getScoreDetails(totalScore);
 
+  // Direction score based on Trend + Momentum + Risk only (max 60 pts)
+  const directionScore = data ? (data.breakdown.trend + data.breakdown.momentum + data.breakdown.risk) : 0;
+  const getDirectionDetails = (score: number) => {
+    if (score >= 45) {
+      return { label: 'Strong Bull', color: 'text-[#22c55e]', bias: 'Bullish Bias' };
+    }
+    if (score >= 33) {
+      return { label: 'Bull', color: 'text-[#a3e635]', bias: 'Bullish Bias' };
+    }
+    if (score >= 24) {
+      return { label: 'Neutral', color: 'text-amber-500', bias: 'No Clear Bias' };
+    }
+    if (score >= 15) {
+      return { label: 'Bear', color: 'text-red-400', bias: 'Bearish Bias' };
+    }
+    return { label: 'Strong Bear', color: 'text-red-500', bias: 'Bearish Bias' };
+  };
+  const directionMeta = getDirectionDetails(directionScore);
+
   const radarData = data ? [
     { subject: 'RSI', value: parseFloat(data.indicators.rsi) || 50 },
     { subject: 'MACD', value: data.indicators.macd === 'Bullish' ? 90 : 30 },
@@ -426,6 +447,18 @@ export default function App() {
               <LayoutGrid className="h-3.5 w-3.5" />
               Screener
             </button>
+            <button
+              type="button"
+              onClick={() => setActiveView(activeView === 'reports' ? 'dashboard' : 'reports')}
+              className={`px-4 py-1.5 text-xs font-semibold border rounded transition-all cursor-pointer flex items-center gap-1.5 ${
+                activeView === 'reports'
+                  ? 'bg-[#6366f1]/20 border-[#6366f1]/50 text-[#a5b4fc] hover:bg-[#6366f1]/30 shadow-[0_0_12px_rgba(99,102,241,0.25)]'
+                  : 'bg-[#121316] hover:bg-[#1a1b20] active:bg-black border-[#20232a] hover:border-[#6366f1] text-white'
+              }`}
+            >
+              <FileText className="h-3.5 w-3.5 text-[#818cf8]" />
+              US Top 50 Reports
+            </button>
 
           </form>
 
@@ -463,6 +496,15 @@ export default function App() {
       <main className="max-w-[1550px] mx-auto px-4 py-6">
         {activeView === 'screener' ? (
           <ScreenerView
+            onSelectTicker={(symbol) => {
+              setTicker(symbol);
+              setActiveView('dashboard');
+              fetchStockData(symbol);
+            }}
+            onClose={() => setActiveView('dashboard')}
+          />
+        ) : activeView === 'reports' ? (
+          <UsReportsView
             onSelectTicker={(symbol) => {
               setTicker(symbol);
               setActiveView('dashboard');
@@ -530,11 +572,11 @@ export default function App() {
               {/* Direction Card */}
               <div className="bg-[#0f1013] border border-[#1f2128] rounded p-5 flex flex-col items-center justify-center text-center">
                 <span className="text-xs text-zinc-500 font-mono uppercase mb-2">Direction</span>
-                <div className={`text-2xl font-black uppercase tracking-tight ${totalScore >= 75 ? 'text-[#22c55e]' : totalScore >= 55 ? 'text-[#a3e635]' : totalScore >= 40 ? 'text-amber-500' : 'text-red-500'}`}>
-                  {totalScore >= 75 ? 'Strong Bull' : totalScore >= 55 ? 'Bull' : totalScore >= 40 ? 'Neutral' : totalScore >= 25 ? 'Bear' : 'Strong Bear'}
+                <div className={`text-2xl font-black uppercase tracking-tight ${directionMeta.color}`}>
+                  {directionMeta.label}
                 </div>
                 <span className="text-[10px] text-zinc-500 font-mono mt-1 uppercase">
-                  {totalScore >= 55 ? 'Bullish Bias' : totalScore >= 40 ? 'No Clear Bias' : 'Bearish Bias'}
+                  {directionMeta.bias} ({directionScore}/60 pts)
                 </span>
               </div>
 

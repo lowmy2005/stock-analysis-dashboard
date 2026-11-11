@@ -10,7 +10,7 @@ import { computeScore } from './src/utils/score';
 import { StockQueryResponse, HistoricalData, KeyLevels, InsideAnalyst, MultiPeriod, ScoreBreakdown, Fundamentals, IndicatorSignals } from './src/types';
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
 app.use(express.json());
 
@@ -876,6 +876,14 @@ app.get('/api/screener', async (req, res) => {
            scoreRes = calculateCompositeScore({ price: q.regularMarketPrice ?? 0 });
         }
         
+        const trend = scoreRes.trend || 0;
+        const momentum = scoreRes.momentum || 0;
+        const risk = scoreRes.risk || 0;
+        const directionScore = trend + momentum + risk;
+
+        const action = scoreRes.score >= 70 ? 'Strong Buy' : scoreRes.score >= 55 ? 'Buy' : scoreRes.score >= 40 ? 'Hold' : 'Sell';
+        const direction = directionScore >= 45 ? 'Strong Bull' : directionScore >= 33 ? 'Bull' : directionScore >= 24 ? 'Neutral' : directionScore >= 15 ? 'Bear' : 'Strong Bear';
+
         return {
           symbol: q.symbol,
           name: q.shortName || q.longName || q.symbol,
@@ -885,6 +893,9 @@ app.get('/api/screener', async (req, res) => {
           volume: q.regularMarketVolume ?? 0,
           marketCap: q.marketCap ?? 0,
           score: scoreRes.score,
+          directionScore,
+          action,
+          direction,
         };
       });
 
@@ -1035,7 +1046,8 @@ ${reasoning}
 
 // Configure Vite or Static Files
 async function startServer() {
-  if (process.env.NODE_ENV !== 'production') {
+  const isProduction = process.env.NODE_ENV === 'production' || (typeof __filename !== 'undefined' && __filename.includes('dist'));
+  if (!isProduction) {
     // Development server with Vite middleware integration
     const vite = await createViteServer({
       server: { middlewareMode: true },
